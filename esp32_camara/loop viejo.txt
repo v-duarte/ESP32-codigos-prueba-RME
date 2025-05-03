@@ -1,0 +1,29 @@
+void loop() {
+  // Capturar una foto
+  camera_fb_t *fb = esp_camera_fb_get();
+  if (!fb) {
+    Serial.println("Error al capturar la foto");
+    return;
+  }
+
+  // Crear nombre del archivo
+  String path = "/foto" + String(millis()) + ".jpg";
+  
+  // Guardar la foto en la tarjeta SD
+  File file = SD_MMC.open(path.c_str(), FILE_WRITE);
+  if (!file) {
+    Serial.println("Error al abrir el archivo para escribir");
+  } else {
+    file.write(fb->buf, fb->len);  // Escribir los datos de la imagen en el archivo: la imagen y el tamaño de archivo
+    Serial.printf("Foto guardada: %s\n", path.c_str());
+  }
+
+  // Cerrar el archivo
+  file.close();
+
+  // Liberar el frame buffer
+  esp_camera_fb_return(fb);
+
+  // Pausa antes de la siguiente captura
+  delay(5000);  // Captura una foto cada 5 segundos
+}

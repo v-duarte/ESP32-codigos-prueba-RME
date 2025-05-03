@@ -1,0 +1,50 @@
+#include <WiFi.h>
+#include <WiFiUdp.h>
+
+const char* ssid = "ESP32-AP";
+const char* password = "123456789";
+WiFiUDP udp;
+
+const unsigned int localPort = 12345; // Puerto para recibir
+const char* allowedIPStr = "192.168.4.2"; // IP permitida del cliente
+IPAddress allowedIP; // Variable para almacenar la IP permitida
+bool clientConnected = false; // Bandera para verificar si ya hay un cliente conectado
+
+void setup() {
+  Serial.begin(115200);
+  WiFi.softAP(ssid, password);
+  udp.begin(localPort);
+  allowedIP.fromString(allowedIPStr); // Convertir la IP permitida de cadena a IPAddress
+  Serial.println("AP Started and listening for broadcasts...");
+}
+
+void loop() {
+  // Verificar si hay paquetes UDP disponibles
+  int packetSize = udp.parsePacket();
+  if (packetSize) {
+    IPAddress remoteIP = udp.remoteIP();
+    
+    // Solo procesar paquetes de la IP permitida
+    if (remoteIP != allowedIP) {
+      Serial.println("Paquete descartado de IP no permitida: " + remoteIP.toString());
+      udp.flush(); // Opcional: vaciar el buffer de paquetes
+      return; // Salir del loop si la IP no es permitida
+    }
+
+    // Leer el mensaje del cliente
+    char incomingPacket[255];
+    int len = udp.read(incomingPacket, 255);
+    if (len > 0) {
+      incomingPacket[len] = 0; // Terminar la cadena
+      Serial.printf("Paquete recibido de %s: %s\n", remoteIP.toString().c_str(), incomingPacket);
+
+      // Aquí puedes procesar el paquete como desees
+      if (incomingPacket == String("CONN_REQUEST") && !clientConnected) {
+        clientConnected = true; // Marcar que hay un cliente conectado
+        Serial.println("Cliente conectado: " + remoteIP.toString());
+        // Respuesta de conexión si es necesario
+      }
+    }
+  }
+  delay(500);
+}
